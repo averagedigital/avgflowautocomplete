@@ -1,0 +1,42 @@
+.DS_Store
+build.log
+
+# Local agent/editor state
+.claude/
+
+# Xcode local state and build output
+.derived/
+DerivedData/
+*.xcuserstate
+*.xcuserdata/
+AICompleteMac.xcodeproj/project.xcworkspace/xcuserdata/
+
+# Secrets and local credentials
+.env
+.env.*
+*.pem
+*.p12
+*.p8
+*.key
+*.mobileprovision
+id_rsa
+id_ed25519
+credentials.json
+secrets.json
+secret.json
+token.json
+*.credentials
+*.secrets
+*.tokens
+
+# Internal docs and task notes
+DOCS/
+tasks/
+*.md
+*.pdf
+*.doc
+*.docx
+
+# Vendored/generated native runtime output
+Shared/LlamaCpp/build/
+Shared/LlamaCpp/vendor/

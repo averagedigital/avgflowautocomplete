@@ -1,0 +1,143 @@
+name: AICompleteMac
+options:
+  deploymentTarget:
+    macOS: "14.0"
+configs:
+  Debug: debug
+  Release: release
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CLANG_CXX_LANGUAGE_STANDARD: "gnu++17"
+    HEADER_SEARCH_PATHS:
+      - "$(SRCROOT)/Shared/LlamaCpp"
+      - "$(SRCROOT)/Shared/LlamaCpp/include"
+  configs:
+    Debug:
+      OTHER_CFLAGS:
+        - "$(inherited)"
+        - "-DGGML_USE_ACCELERATE"
+        - "-DGGML_USE_METAL"
+      OTHER_CPLUSPLUSFLAGS:
+        - "$(inherited)"
+        - "-DGGML_USE_ACCELERATE"
+        - "-DGGML_USE_METAL"
+    Release:
+      OTHER_CFLAGS:
+        - "$(inherited)"
+        - "-O3"
+        - "-DNDEBUG"
+        - "-DGGML_USE_ACCELERATE"
+        - "-DGGML_USE_METAL"
+      OTHER_CPLUSPLUSFLAGS:
+        - "$(inherited)"
+        - "-O3"
+        - "-DNDEBUG"
+        - "-DGGML_USE_ACCELERATE"
+        - "-DGGML_USE_METAL"
+
+targets:
+  AICompleteMac:
+    type: application
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: App
+      - path: Core
+      - path: Native
+      - path: Overlay
+      - path: Views
+      - path: Shared
+        excludes:
+          - "LlamaCpp/**"
+      - path: Resources
+        excludes:
+          - "Info.plist"
+          - "AICompleteMac.entitlements"
+          - "AIComplete.icns"
+          - "AIComplete.iconset/**"
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: avgFlow
+        CFBundleName: avgFlow
+        LSUIElement: true
+        LSMinimumSystemVersion: "14.0"
+        NSAccessibilityUsageDescription: >
+          avgFlow needs Accessibility access to read text from
+          your active text fields and provide autocomplete suggestions.
+    entitlements:
+      path: Resources/AICompleteMac.entitlements
+      properties:
+        com.apple.security.app-sandbox: false
+    settings:
+      base:
+        PRODUCT_NAME: avgFlow
+        PRODUCT_BUNDLE_IDENTIFIER: com.aicomplete.mac
+        INFOPLIST_FILE: Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Resources/AICompleteMac.entitlements
+        SWIFT_OBJC_BRIDGING_HEADER: Native/AICompleteMac-Bridging-Header.h
+        ENABLE_HARDENED_RUNTIME: YES
+        DEVELOPMENT_TEAM: 4TF8NYYQJ6
+        CODE_SIGN_IDENTITY: "Apple Development"
+        CODE_SIGN_STYLE: Automatic
+    preBuildScripts:
+      - name: Bootstrap llama.cpp Runtime
+        script: |
+          "$SRCROOT/Scripts/ensure_llama_runtime.sh"
+    postBuildScripts:
+      - name: Bundle llama.cpp Runtime
+        script: |
+          "$SRCROOT/Scripts/copy_llama_runtime.sh"
+    dependencies:
+      - sdk: Accelerate.framework
+      - sdk: Metal.framework
+      - sdk: MetalKit.framework
+      - sdk: Security.framework
+      - sdk: CoreData.framework
+
+  AICompleteMacTests:
+    type: bundle.unit-test
+    platform: macOS
+    deploymentTarget: "14.0"
+    sources:
+      - path: Tests/SharedTests
+      - path: Tests/CoreTests
+      - path: Tests/OverlayTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.aicomplete.mac.tests
+        GENERATE_INFOPLIST_FILE: YES
+        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/avgFlow.app/Contents/MacOS/avgFlow"
+        BUNDLE_LOADER: "$(TEST_HOST)"
+        CODE_SIGN_STYLE: Automatic
+        DEVELOPMENT_TEAM: 4TF8NYYQJ6
+        CODE_SIGN_IDENTITY: "Apple Development"
+    dependencies:
+      - target: AICompleteMac
+
+schemes:
+  AICompleteMac:
+    build:
+      targets:
+        AICompleteMac: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - AICompleteMacTests
+    archive:
+      config: Release
+
+  AICompleteMacPerf:
+    build:
+      targets:
+        AICompleteMac: all
+    run:
+      config: Release
+    profile:
+      config: Release
+    archive:
+      config: Release

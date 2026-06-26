@@ -1,0 +1,146 @@
+import ApplicationServices
+import AppKit
+
+final class TextInsertionService {
+
+    /// Primary: insert text via the Accessibility API by setting kAXSelectedTextAttribute.
+    /// Returns `true` if successful.
+    @discardableResult
+    func insertViaAccessibility(
+        text: String,
+        into element: AXUIElement,
+        replacementLength: Int = 0
+    ) -> Bool {
+        if replacementLength > 0 {
+            return replaceViaAccessibility(text: text, into: element, replacementLength: replacementLength)
+        }
+
+        // Simple insertion at cursor position
+        let result = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextAttribute as CFString,
+            text as CFTypeRef
+        )
+        return result == .success
+    }
+
+    /// Fallback: insert text via clipboard + Cmd+V.
+    /// Preserves previous clipboard contents.
+    func insertViaClipboard(text: String) {
+        let pasteboard = NSPasteboard.general
+        let previousItems = pasteboard.pasteboardItems?
+            .compactMap { $0.copy() as? NSPasteboardItem } ?? []
+
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+
+        // Synthesize Cmd+V
+        let source = CGEventSource(stateID: .hidSystemState)
+        let vKeyCode: UInt16 = 0x09
+
+        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true)
+        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false)
+        keyDown?.flags = .maskCommand
+        keyUp?.flags = .maskCommand
+        keyDown?.post(tap: .cgSessionEventTap)
+        keyUp?.post(tap: .cgSessionEventTap)
+
+        // Restore clipboard after a short delay.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+            pasteboard.clearContents()
+            if !previousItems.isEmpty {
+                _ = pasteboard.writeObjects(previousItems)
+            }
+        }
+    }
+
+    /// Replace an exact pre-captured selected range with new text.
+    /// Useful for cross-app rewrite flows where we need deterministic range replacement.
+    @discardableResult
+    func replaceSelectedRangeViaAccessibility(
+        text: String,
+        in element: AXUIElement,
+        selectedRange: CFRange
+    ) -> Bool {
+        guard setSelectedRange(element, selectedRange: selectedRange) else {
+            return false
+        }
+
+        let replaceResult = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextAttribute as CFString,
+            text as CFTypeRef
+        )
+        return replaceResult == .success
+    }
+
+    // MARK: - Private
+
+    private func replaceViaAccessibility(text: String, into element: AXUIElement, replacementLength: Int) -> Bool {
+        // Read current cursor position
+        var rangeRef: CFTypeRef?
+        guard AXUIElementCopyAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            &rangeRef
+        ) == .success else {
+            return false
+        }
+
+        guard let selectedRangeValue = axValue(from: rangeRef) else {
+            return false
+        }
+
+        var currentRange = CFRange(location: 0, length: 0)
+        guard AXValueGetValue(selectedRangeValue, .cfRange, &currentRange) else {
+            return false
+        }
+
+        // Expand selection backwards by replacementLength
+        let replaceStart = max(0, currentRange.location - replacementLength)
+        let replaceLength = currentRange.location - replaceStart
+        var replaceRange = CFRange(location: replaceStart, length: replaceLength)
+
+        guard let axRange = AXValueCreate(.cfRange, &replaceRange) else {
+            return false
+        }
+
+        // Set the selection to the range we want to replace
+        let selectResult = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            axRange
+        )
+        guard selectResult == .success else {
+            return false
+        }
+
+        // Replace selected text
+        let insertResult = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextAttribute as CFString,
+            text as CFTypeRef
+        )
+        return insertResult == .success
+    }
+
+    private func axValue(from reference: CFTypeRef?) -> AXValue? {
+        guard let reference else { return nil }
+        guard CFGetTypeID(reference) == AXValueGetTypeID() else { return nil }
+        return unsafeBitCast(reference, to: AXValue.self)
+    }
+
+    @discardableResult
+    func setSelectedRange(_ element: AXUIElement, selectedRange: CFRange) -> Bool {
+        var safeRange = CFRange(location: max(0, selectedRange.location), length: max(0, selectedRange.length))
+        guard let rangeAXValue = AXValueCreate(.cfRange, &safeRange) else {
+            return false
+        }
+        let selectResult = AXUIElementSetAttributeValue(
+            element,
+            kAXSelectedTextRangeAttribute as CFString,
+            rangeAXValue
+        )
+        return selectResult == .success
+    }
+}

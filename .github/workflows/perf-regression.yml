@@ -1,0 +1,26 @@
+name: Performance Regression
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 9 * * 1"
+
+jobs:
+  xctrace-baseline:
+    name: xctrace Baseline (Release)
+    runs-on: macos-14
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select latest stable Xcode
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Record traces
+        run: ./scripts/perf/record_xctrace.sh
+
+      - name: Upload traces
+        uses: actions/upload-artifact@v4
+        with:
+          name: perf-traces
+          path: artifacts/perf
