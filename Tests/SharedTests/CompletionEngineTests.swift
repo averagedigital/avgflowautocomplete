@@ -262,6 +262,21 @@ final class CompletionEngineTests: XCTestCase {
     }
 }
 
+final class SuggestionRequestGateTests: XCTestCase {
+    func testInvalidationRejectsPreviousRequestAndAllowsNextRequest() {
+        var gate = SuggestionRequestGate()
+        let previousRequest = gate.beginRequest()
+
+        XCTAssertTrue(gate.isCurrent(previousRequest))
+
+        gate.invalidate()
+
+        XCTAssertFalse(gate.isCurrent(previousRequest))
+        let nextRequest = gate.beginRequest()
+        XCTAssertTrue(gate.isCurrent(nextRequest))
+    }
+}
+
 private actor MockUserDictionary: UserDictionaryProviding {
     private let suggestions: [Completion]
 

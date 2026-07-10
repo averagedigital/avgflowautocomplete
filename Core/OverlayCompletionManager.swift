@@ -80,7 +80,7 @@ final class OverlayCompletionManager {
     private var localModelLoadAttempted = false
     private var cachedLexiconSnippet = ""
     private var isRunning = false
-    private var completionRequestSerial: UInt64 = 0
+    private var requestGate = SuggestionRequestGate()
     private var lastTypingEventAt: Date?
     private var typingSpeedEMA: Double = 0
     private var rapidTypingStreak = 0
@@ -238,7 +238,7 @@ final class OverlayCompletionManager {
 
     func stop() {
         isRunning = false
-        completionRequestSerial &+= 1
+        requestGate.invalidate()
         resetTypingCadence()
         focusedAppMonitor.stop()
         accessibilityObserver.stopObserving()
@@ -301,6 +301,9 @@ final class OverlayCompletionManager {
     // MARK: - Focus Changed
 
     private func handleFocusChanged() {
+        resetInferenceState()
+        dismissSuggestion()
+
         guard let appElement = focusedAppMonitor.currentAppElement else {
             debugLog("[AIComplete] handleFocusChanged: no appElement")
             dismissSuggestion()
@@ -437,8 +440,7 @@ final class OverlayCompletionManager {
 
     private func requestCompletions(for context: TextContext, element: AXUIElement, manualInvocation: Bool) {
         currentCompletionTask?.cancel()
-        completionRequestSerial &+= 1
-        let requestID = completionRequestSerial
+        let requestID = requestGate.beginRequest()
 
         if suggestionTriggerMode == .manualHotkey && !manualInvocation {
             dismissSuggestion()
@@ -1055,13 +1057,13 @@ final class OverlayCompletionManager {
         previousContext = nil
         lastInferenceWordCount = 0
         lastInferenceTextBefore = ""
-        completionRequestSerial &+= 1
+        requestGate.invalidate()
         resetTypingCadence()
         currentCompletionTask?.cancel()
     }
 
     private func isCurrentRequest(_ requestID: UInt64) -> Bool {
-        requestID == completionRequestSerial
+        requestGate.isCurrent(requestID)
     }
 
     // MARK: - Settings

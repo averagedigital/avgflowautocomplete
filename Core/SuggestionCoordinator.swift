@@ -1,6 +1,23 @@
 import ApplicationServices
 import Foundation
 
+struct SuggestionRequestGate {
+    private var generation: UInt64 = 0
+
+    mutating func beginRequest() -> UInt64 {
+        generation &+= 1
+        return generation
+    }
+
+    mutating func invalidate() {
+        generation &+= 1
+    }
+
+    func isCurrent(_ request: UInt64) -> Bool {
+        request == generation
+    }
+}
+
 @MainActor
 final class SuggestionCoordinator {
     private let panelController: SuggestionPanelController
