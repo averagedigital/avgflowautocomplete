@@ -98,6 +98,36 @@ final class TextProcessorPartialAcceptanceTests: XCTestCase {
             " world"
         )
     }
+
+    func testReplacementSuffixLengthUsesUTF16CodeUnits() {
+        XCTAssertEqual(
+            TextProcessor.replacementSuffixUTF16Length(
+                in: "hello 😀",
+                characterCount: 1
+            ),
+            2
+        )
+    }
+
+    func testReplacementSuffixLengthClampsToAvailableContext() {
+        XCTAssertEqual(
+            TextProcessor.replacementSuffixUTF16Length(
+                in: "a😀",
+                characterCount: 99
+            ),
+            3
+        )
+    }
+
+    func testReplacementRangeClampsToTextBeforeCursor() {
+        let range = TextInsertionService.replacementRange(
+            cursorRange: CFRange(location: 2, length: 0),
+            replacementUTF16Length: 8
+        )
+
+        XCTAssertEqual(range.location, 0)
+        XCTAssertEqual(range.length, 2)
+    }
 }
 
 final class AppOverridesStoreTests: XCTestCase {

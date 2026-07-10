@@ -653,7 +653,11 @@ final class OverlayCompletionManager {
                 }
             }
 
-            guard completion.replacementLength > 0, isMeaningfulSuggestion(replacement) else {
+            let replacementUTF16Length = TextProcessor.replacementSuffixUTF16Length(
+                in: context.textBefore,
+                characterCount: completion.replacementLength
+            )
+            guard replacementUTF16Length > 0, isMeaningfulSuggestion(replacement) else {
                 return nil
             }
 
@@ -662,7 +666,7 @@ final class OverlayCompletionManager {
                 confidence: completion.confidence,
                 source: completion.source,
                 type: .replacement,
-                replacementLength: completion.replacementLength
+                replacementLength: replacementUTF16Length
             )
         }
 

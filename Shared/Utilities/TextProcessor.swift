@@ -119,6 +119,13 @@ enum TextProcessor {
         String(textBefore.suffix(Constants.Limits.userDictionaryContextPrefixLimit))
     }
 
+    static func replacementSuffixUTF16Length(
+        in textBefore: String,
+        characterCount: Int
+    ) -> Int {
+        String(textBefore.suffix(max(0, characterCount))).utf16.count
+    }
+
     static func wordCount(in text: String) -> Int {
         text
             .split { character in

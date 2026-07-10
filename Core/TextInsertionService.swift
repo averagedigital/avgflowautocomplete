@@ -126,10 +126,11 @@ final class TextInsertionService {
             return false
         }
 
-        // Expand selection backwards by replacementLength
-        let replaceStart = max(0, currentRange.location - replacementLength)
-        let replaceLength = currentRange.location - replaceStart
-        var replaceRange = CFRange(location: replaceStart, length: replaceLength)
+        // Expand selection backwards by replacementLength UTF-16 code units.
+        var replaceRange = Self.replacementRange(
+            cursorRange: currentRange,
+            replacementUTF16Length: replacementLength
+        )
 
         guard let axRange = AXValueCreate(.cfRange, &replaceRange) else {
             return false
@@ -151,7 +152,24 @@ final class TextInsertionService {
             kAXSelectedTextAttribute as CFString,
             text as CFTypeRef
         )
-        return insertResult == .success
+        guard insertResult == .success else {
+            _ = AXUIElementSetAttributeValue(
+                element,
+                kAXSelectedTextRangeAttribute as CFString,
+                selectedRangeValue
+            )
+            return false
+        }
+        return true
+    }
+
+    static func replacementRange(
+        cursorRange: CFRange,
+        replacementUTF16Length: Int
+    ) -> CFRange {
+        let cursorLocation = max(0, cursorRange.location)
+        let replaceStart = max(0, cursorLocation - max(0, replacementUTF16Length))
+        return CFRange(location: replaceStart, length: cursorLocation - replaceStart)
     }
 
     private func axValue(from reference: CFTypeRef?) -> AXValue? {
