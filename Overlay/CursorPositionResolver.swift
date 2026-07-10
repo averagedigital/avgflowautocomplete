@@ -78,6 +78,10 @@ final class CursorPositionResolver {
         return max(0, selectedRange.length)
     }
 
+    static func allowsStandardCompletion(selectedRangeLength: Int) -> Bool {
+        selectedRangeLength <= 0
+    }
+
     // MARK: - Private
 
     private func selectedTextRange(for element: AXUIElement) -> CFRange? {

@@ -220,4 +220,9 @@ final class SingleSuggestionAcceptModeTests: XCTestCase {
             )
         )
     }
+
+    func testActiveSelectionSuppressesStandardCompletion() {
+        XCTAssertFalse(CursorPositionResolver.allowsStandardCompletion(selectedRangeLength: 3))
+        XCTAssertTrue(CursorPositionResolver.allowsStandardCompletion(selectedRangeLength: 0))
+    }
 }

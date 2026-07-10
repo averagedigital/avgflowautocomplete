@@ -357,6 +357,17 @@ final class OverlayCompletionManager {
             return
         }
 
+        let selectedRangeLength = cursorResolver.selectedRangeLength(for: element)
+        guard CursorPositionResolver.allowsStandardCompletion(
+            selectedRangeLength: selectedRangeLength
+        ) else {
+            currentCompletionTask?.cancel()
+            dismissSuggestion()
+            previousContext = nil
+            logDecision(decision: "suggestion_rejected", reason: "active_selection")
+            return
+        }
+
         let appBundleID = focusedAppMonitor.currentAppBundleID
         let contextReadSignpostID = OSSignpostID(log: signpostLog)
         os_signpost(.begin, log: signpostLog, name: "ax_read_context", signpostID: contextReadSignpostID)
