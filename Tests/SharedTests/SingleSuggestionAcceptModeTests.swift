@@ -225,4 +225,30 @@ final class SingleSuggestionAcceptModeTests: XCTestCase {
         XCTAssertFalse(CursorPositionResolver.allowsStandardCompletion(selectedRangeLength: 3))
         XCTAssertTrue(CursorPositionResolver.allowsStandardCompletion(selectedRangeLength: 0))
     }
+
+    func testUnconfirmedInsertionDoesNotAuthorizeConfirmedSideEffects() {
+        let result = InsertionResult(
+            succeeded: true,
+            isConfirmed: false,
+            route: .clipboardFallback,
+            targetClass: .chromiumElectron,
+            reason: "clipboard_fallback_posted_unverified"
+        )
+
+        XCTAssertFalse(result.shouldRecordAcceptance)
+        XCTAssertFalse(result.allowsPartialContinuation)
+    }
+
+    func testConfirmedInsertionAuthorizesConfirmedSideEffects() {
+        let result = InsertionResult(
+            succeeded: true,
+            isConfirmed: true,
+            route: .accessibility,
+            targetClass: .appKitNative,
+            reason: "ax_success"
+        )
+
+        XCTAssertTrue(result.shouldRecordAcceptance)
+        XCTAssertTrue(result.allowsPartialContinuation)
+    }
 }

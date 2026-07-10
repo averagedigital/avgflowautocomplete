@@ -10,9 +10,18 @@ enum InsertionRoute: String {
 
 struct InsertionResult {
     let succeeded: Bool
+    let isConfirmed: Bool
     let route: InsertionRoute
     let targetClass: TargetAppClass
     let reason: String
+
+    var shouldRecordAcceptance: Bool {
+        succeeded && isConfirmed
+    }
+
+    var allowsPartialContinuation: Bool {
+        succeeded && isConfirmed
+    }
 }
 
 final class AcceptanceSynthesizer {
@@ -86,6 +95,7 @@ final class AcceptanceSynthesizer {
         if targetClass == .secure {
             return InsertionResult(
                 succeeded: false,
+                isConfirmed: false,
                 route: .blockedSecure,
                 targetClass: targetClass,
                 reason: "secure_context"
@@ -100,6 +110,7 @@ final class AcceptanceSynthesizer {
         if insertedViaAX {
             return InsertionResult(
                 succeeded: true,
+                isConfirmed: true,
                 route: .accessibility,
                 targetClass: targetClass,
                 reason: "ax_success"
@@ -109,6 +120,7 @@ final class AcceptanceSynthesizer {
         guard compatibilityLayer.allowsClipboardFallback(for: targetClass) else {
             return InsertionResult(
                 succeeded: false,
+                isConfirmed: false,
                 route: .blockedByPolicy,
                 targetClass: targetClass,
                 reason: "clipboard_policy_blocked"
@@ -120,6 +132,7 @@ final class AcceptanceSynthesizer {
            currentAppPID != activeSuggestionPID {
             return InsertionResult(
                 succeeded: false,
+                isConfirmed: false,
                 route: .blockedByPolicy,
                 targetClass: targetClass,
                 reason: "clipboard_pid_mismatch"
@@ -129,6 +142,7 @@ final class AcceptanceSynthesizer {
         guard textInsertionService.insertViaClipboard(text: completion.text) else {
             return InsertionResult(
                 succeeded: false,
+                isConfirmed: false,
                 route: .clipboardFallback,
                 targetClass: targetClass,
                 reason: "clipboard_fallback_not_posted"
@@ -136,6 +150,7 @@ final class AcceptanceSynthesizer {
         }
         return InsertionResult(
             succeeded: true,
+            isConfirmed: false,
             route: .clipboardFallback,
             targetClass: targetClass,
             reason: "clipboard_fallback_posted_unverified"

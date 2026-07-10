@@ -795,13 +795,18 @@ final class OverlayCompletionManager {
                 textReader: textReader
             )
             logDecision(
-                decision: insertionResult.succeeded ? "accept_partial_success" : "accept_partial_failed",
+                decision: insertionDecision(
+                    for: insertionResult,
+                    confirmed: "accept_partial_success",
+                    dispatched: "accept_partial_dispatched",
+                    failed: "accept_partial_failed"
+                ),
                 reason: insertionResult.reason,
                 source: sourceName(completion.source),
                 targetClass: insertionResult.targetClass.rawValue,
                 strategy: insertionResult.route.rawValue
             )
-            guard insertionResult.succeeded else {
+            guard insertionResult.allowsPartialContinuation else {
                 dismissSuggestion()
                 return
             }
@@ -838,7 +843,12 @@ final class OverlayCompletionManager {
             textReader: textReader
         )
         logDecision(
-            decision: insertionResult.succeeded ? "accept_success" : "accept_failed",
+            decision: insertionDecision(
+                for: insertionResult,
+                confirmed: "accept_success",
+                dispatched: "accept_dispatched",
+                failed: "accept_failed"
+            ),
             reason: insertionResult.reason,
             source: sourceName(completion.source),
             targetClass: insertionResult.targetClass.rawValue,
@@ -852,7 +862,7 @@ final class OverlayCompletionManager {
         dismissSuggestion()
 
         // Record for personalization + acceptance history
-        if let context = contextBeforeAcceptance {
+        if insertionResult.shouldRecordAcceptance, let context = contextBeforeAcceptance {
             Task { [personalizationManager, personalLexicon, acceptanceHistory] in
                 await personalizationManager.recordAcceptedCompletion(completion, context: context)
                 await personalLexicon.ingestAcceptedCompletion(
@@ -878,12 +888,22 @@ final class OverlayCompletionManager {
         // Schedule next completion after acceptance
         lastInferenceWordCount = 0
         lastInferenceTextBefore = ""
-        guard suggestionTriggerMode == .automatic else {
+        guard insertionResult.isConfirmed, suggestionTriggerMode == .automatic else {
             return
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             self?.evaluateAndRequestCompletions(force: true, manualInvocation: false)
         }
+    }
+
+    private func insertionDecision(
+        for result: InsertionResult,
+        confirmed: String,
+        dispatched: String,
+        failed: String
+    ) -> String {
+        guard result.succeeded else { return failed }
+        return result.isConfirmed ? confirmed : dispatched
     }
 
     private func dismissSuggestion() {
