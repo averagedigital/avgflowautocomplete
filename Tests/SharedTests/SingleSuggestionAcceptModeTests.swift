@@ -202,4 +202,22 @@ final class SingleSuggestionAcceptModeTests: XCTestCase {
             SingleSuggestionAcceptMode.nextWord.rawValue
         )
     }
+
+    func testClipboardRestoreAllowedWhenInjectedContentIsStillCurrent() {
+        XCTAssertTrue(
+            TextInsertionService.shouldRestoreClipboard(
+                injectedChangeCount: 10,
+                currentChangeCount: 10
+            )
+        )
+    }
+
+    func testClipboardRestoreRejectedAfterExternalClipboardChange() {
+        XCTAssertFalse(
+            TextInsertionService.shouldRestoreClipboard(
+                injectedChangeCount: 10,
+                currentChangeCount: 11
+            )
+        )
+    }
 }

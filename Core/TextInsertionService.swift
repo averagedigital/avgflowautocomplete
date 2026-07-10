@@ -35,7 +35,25 @@ final class TextInsertionService {
 
         pasteboard.clearContents()
         guard pasteboard.setString(text, forType: .string) else {
+            pasteboard.clearContents()
+            if !previousItems.isEmpty {
+                _ = pasteboard.writeObjects(previousItems)
+            }
             return false
+        }
+        let injectedChangeCount = pasteboard.changeCount
+
+        let restoreClipboardIfUnchanged = {
+            guard Self.shouldRestoreClipboard(
+                injectedChangeCount: injectedChangeCount,
+                currentChangeCount: pasteboard.changeCount
+            ) else {
+                return
+            }
+            pasteboard.clearContents()
+            if !previousItems.isEmpty {
+                _ = pasteboard.writeObjects(previousItems)
+            }
         }
 
         // Synthesize Cmd+V
@@ -44,6 +62,7 @@ final class TextInsertionService {
 
         guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true),
               let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false) else {
+            restoreClipboardIfUnchanged()
             return false
         }
         keyDown.flags = .maskCommand
@@ -53,12 +72,16 @@ final class TextInsertionService {
 
         // Restore clipboard after a short delay.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            pasteboard.clearContents()
-            if !previousItems.isEmpty {
-                _ = pasteboard.writeObjects(previousItems)
-            }
+            restoreClipboardIfUnchanged()
         }
         return true
+    }
+
+    static func shouldRestoreClipboard(
+        injectedChangeCount: Int,
+        currentChangeCount: Int
+    ) -> Bool {
+        injectedChangeCount == currentChangeCount
     }
 
     /// Replace an exact pre-captured selected range with new text.
