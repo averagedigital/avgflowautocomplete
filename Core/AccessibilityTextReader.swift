@@ -29,13 +29,11 @@ final class AccessibilityTextReader {
         // Step 1: Read full text value
         if let fullText = stringAttribute(element, kAXValueAttribute) {
             // Step 2: Get cursor position via selected text range
-            let cursorUTF16Offset: Int
-            if let range = selectedRange(element) {
-                let utf16Length = (fullText as NSString).length
-                cursorUTF16Offset = min(max(0, range.location), utf16Length)
-            } else {
-                // If we can't read the cursor, assume it's at the end
-                cursorUTF16Offset = (fullText as NSString).length
+            guard let cursorUTF16Offset = Self.resolvedCursorUTF16Offset(
+                fullText: fullText,
+                selectedRange: selectedRange(element)
+            ) else {
+                return nil
             }
 
             // Step 3: Build TextContext using the shared TextProcessor
@@ -48,6 +46,16 @@ final class AccessibilityTextReader {
 
         // Web and rich text fields often don't expose AXValue.
         return readContextViaParameterizedRange(from: element, appBundleID: appBundleID)
+    }
+
+    static func resolvedCursorUTF16Offset(
+        fullText: String,
+        selectedRange: CFRange?
+    ) -> Int? {
+        guard let selectedRange, selectedRange.location != kCFNotFound, selectedRange.location >= 0 else {
+            return nil
+        }
+        return min(selectedRange.location, (fullText as NSString).length)
     }
 
     // MARK: - Element Queries

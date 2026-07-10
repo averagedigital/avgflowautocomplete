@@ -277,6 +277,36 @@ final class SuggestionRequestGateTests: XCTestCase {
     }
 }
 
+final class AccessibilityCursorOffsetTests: XCTestCase {
+    func testCursorOffsetIsUnavailableWithoutSelectedRange() {
+        XCTAssertNil(
+            AccessibilityTextReader.resolvedCursorUTF16Offset(
+                fullText: "prefix suffix",
+                selectedRange: nil
+            )
+        )
+    }
+
+    func testCursorOffsetClampsSelectedRangeToUTF16Length() {
+        XCTAssertEqual(
+            AccessibilityTextReader.resolvedCursorUTF16Offset(
+                fullText: "a😀b",
+                selectedRange: CFRange(location: 99, length: 0)
+            ),
+            4
+        )
+    }
+
+    func testCursorOffsetRejectsInvalidNegativeRange() {
+        XCTAssertNil(
+            AccessibilityTextReader.resolvedCursorUTF16Offset(
+                fullText: "prefix",
+                selectedRange: CFRange(location: kCFNotFound, length: 0)
+            )
+        )
+    }
+}
+
 private actor MockUserDictionary: UserDictionaryProviding {
     private let suggestions: [Completion]
 
