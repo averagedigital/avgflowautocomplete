@@ -30,4 +30,18 @@ final class FocusedAppMonitorTests: XCTestCase {
         XCTAssertEqual(changes.map(\.pid), [101, 202])
         XCTAssertEqual(changes.last?.bundleID, "com.example.second")
     }
+
+    func testAccessibilityNotificationsAreScopedToTheirSourceElements() {
+        XCTAssertEqual(
+            AccessibilityObserver.applicationNotificationNames,
+            [kAXFocusedUIElementChangedNotification as String]
+        )
+        XCTAssertEqual(
+            AccessibilityObserver.textElementNotificationNames,
+            [
+                kAXValueChangedNotification as String,
+                kAXSelectedTextChangedNotification as String
+            ]
+        )
+    }
 }

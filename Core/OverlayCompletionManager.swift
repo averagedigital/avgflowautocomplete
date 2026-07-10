@@ -306,6 +306,7 @@ final class OverlayCompletionManager {
 
         guard let appElement = focusedAppMonitor.currentAppElement else {
             debugLog("[AIComplete] handleFocusChanged: no appElement")
+            accessibilityObserver.stopObservingTextChanges()
             dismissSuggestion()
             cancelSelectionRewriteFlow()
             return
@@ -313,6 +314,7 @@ final class OverlayCompletionManager {
 
         guard let focused = textReader.focusedElement(for: appElement) else {
             debugLog("[AIComplete] handleFocusChanged: no focused element")
+            accessibilityObserver.stopObservingTextChanges()
             dismissSuggestion()
             cancelSelectionRewriteFlow()
             focusedElement = nil
@@ -323,6 +325,7 @@ final class OverlayCompletionManager {
 
         guard textReader.isTextInput(element) else {
             debugLog("[AIComplete] handleFocusChanged: element is not text input")
+            accessibilityObserver.stopObservingTextChanges()
             dismissSuggestion()
             cancelSelectionRewriteFlow()
             focusedElement = nil
@@ -330,6 +333,7 @@ final class OverlayCompletionManager {
         }
 
         debugLog("[AIComplete] handleFocusChanged: found text input element")
+        accessibilityObserver.observeTextChanges(on: element)
         focusedElement = element
         evaluateAndRequestCompletions(force: true, manualInvocation: false)
     }
