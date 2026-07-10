@@ -25,25 +25,31 @@ final class TextInsertionService {
     }
 
     /// Fallback: insert text via clipboard + Cmd+V.
-    /// Preserves previous clipboard contents.
-    func insertViaClipboard(text: String) {
+    /// Preserves previous clipboard contents. Returns whether the paste event was posted,
+    /// not whether the target app accepted the paste.
+    @discardableResult
+    func insertViaClipboard(text: String) -> Bool {
         let pasteboard = NSPasteboard.general
         let previousItems = pasteboard.pasteboardItems?
             .compactMap { $0.copy() as? NSPasteboardItem } ?? []
 
         pasteboard.clearContents()
-        pasteboard.setString(text, forType: .string)
+        guard pasteboard.setString(text, forType: .string) else {
+            return false
+        }
 
         // Synthesize Cmd+V
         let source = CGEventSource(stateID: .hidSystemState)
         let vKeyCode: UInt16 = 0x09
 
-        let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true)
-        let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false)
-        keyDown?.flags = .maskCommand
-        keyUp?.flags = .maskCommand
-        keyDown?.post(tap: .cgSessionEventTap)
-        keyUp?.post(tap: .cgSessionEventTap)
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKeyCode, keyDown: false) else {
+            return false
+        }
+        keyDown.flags = .maskCommand
+        keyUp.flags = .maskCommand
+        keyDown.post(tap: .cgSessionEventTap)
+        keyUp.post(tap: .cgSessionEventTap)
 
         // Restore clipboard after a short delay.
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
@@ -52,6 +58,7 @@ final class TextInsertionService {
                 _ = pasteboard.writeObjects(previousItems)
             }
         }
+        return true
     }
 
     /// Replace an exact pre-captured selected range with new text.

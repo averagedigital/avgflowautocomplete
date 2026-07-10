@@ -5,6 +5,7 @@ enum CloudProvider: String, Sendable, Codable {
     case anthropic
     case xAI
     case openRouter
+    case yandexAIStudio
 }
 
 struct CloudConfiguration: Sendable {
@@ -157,6 +158,13 @@ actor CloudAPIManager: CompletionEngine {
                 maxTokens: maxTokens,
                 apiKey: apiKey
             )
+        case .yandexAIStudio:
+            rawResponse = try await requestYandexAIStudioCompletion(
+                prompt: prompt,
+                systemPrompt: sysPrompt,
+                maxTokens: maxTokens,
+                apiKey: apiKey
+            )
         }
 
         let completions = parseSuggestions(rawResponse, count: count)
@@ -233,6 +241,13 @@ actor CloudAPIManager: CompletionEngine {
                 maxTokens: maxTokens,
                 apiKey: apiKey
             )
+        case .yandexAIStudio:
+            rawResponse = try await requestYandexAIStudioCompletion(
+                prompt: prompt,
+                systemPrompt: sysPrompt,
+                maxTokens: maxTokens,
+                apiKey: apiKey
+            )
         }
 
         let completions = parseSuggestions(rawResponse, count: count)
@@ -299,6 +314,13 @@ actor CloudAPIManager: CompletionEngine {
             )
         case .openRouter:
             rawResponse = try await requestOpenRouterCompletion(
+                prompt: prompt,
+                systemPrompt: systemPrompt,
+                maxTokens: maxTokens,
+                apiKey: apiKey
+            )
+        case .yandexAIStudio:
+            rawResponse = try await requestYandexAIStudioCompletion(
                 prompt: prompt,
                 systemPrompt: systemPrompt,
                 maxTokens: maxTokens,
@@ -536,6 +558,43 @@ actor CloudAPIManager: CompletionEngine {
             throw CloudAPIError.invalidResponse
         }
         return content
+    }
+
+    // MARK: - Yandex AI Studio
+
+    private func requestYandexAIStudioCompletion(
+        prompt: String,
+        systemPrompt: String,
+        maxTokens: Int,
+        apiKey: String
+    ) async throws -> String {
+        guard let url = URL(string: "https://ai.api.cloud.yandex.net/v1/responses") else {
+            throw CloudAPIError.invalidURL
+        }
+
+        let body = YandexResponsesRequest(
+            model: configuration.modelIdentifier,
+            input: [
+                .init(role: "system", content: systemPrompt),
+                .init(role: "user", content: prompt)
+            ],
+            max_output_tokens: maxTokens,
+            temperature: 0.2
+        )
+
+        var request = URLRequest(url: url, timeoutInterval: configuration.timeout)
+        request.httpMethod = "POST"
+        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        request.setValue("Api-Key \(apiKey)", forHTTPHeaderField: "Authorization")
+        request.httpBody = try JSONEncoder().encode(body)
+
+        let data = try await performRequest(request)
+        let response = try JSONDecoder().decode(YandexResponsesResponse.self, from: data)
+        let text = response.outputText
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw CloudAPIError.invalidResponse
+        }
+        return text
     }
 
     // MARK: - Shared Helpers
@@ -1001,5 +1060,44 @@ private struct OpenAIStreamChunk: Decodable {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         choices = (try? container.decode([Choice].self, forKey: .choices)) ?? []
         error = try? container.decode(StreamErrorPayload.self, forKey: .error)
+    }
+}
+
+private struct YandexResponsesRequest: Encodable {
+    struct Message: Encodable {
+        let role: String
+        let content: String
+    }
+
+    let model: String
+    let input: [Message]
+    let max_output_tokens: Int
+    let temperature: Double
+}
+
+private struct YandexResponsesResponse: Decodable {
+    struct OutputItem: Decodable {
+        struct ContentItem: Decodable {
+            let text: String?
+        }
+
+        let content: [ContentItem]?
+    }
+
+    let output: [OutputItem]?
+    let output_text: String?
+    let text: String?
+
+    var outputText: String {
+        if let output_text, !output_text.isEmpty {
+            return output_text
+        }
+        if let text, !text.isEmpty {
+            return text
+        }
+        return output?
+            .flatMap { $0.content ?? [] }
+            .compactMap(\.text)
+            .joined(separator: "\n") ?? ""
     }
 }

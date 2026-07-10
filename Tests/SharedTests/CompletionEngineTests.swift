@@ -222,6 +222,44 @@ final class CompletionEngineTests: XCTestCase {
         XCTAssertEqual(result[0].text, "First suggestion")
         XCTAssertEqual(result[0].source, .cloud)
     }
+
+    func testCloudAPIManagerCallsYandexResponsesAPI() async throws {
+        let session = makeStubbedSession { request in
+            XCTAssertEqual(request.url?.absoluteString, "https://ai.api.cloud.yandex.net/v1/responses")
+            XCTAssertEqual(request.value(forHTTPHeaderField: "Authorization"), "Api-Key test-key")
+
+            let body = try XCTUnwrap(httpBodyData(from: request))
+            let json = try XCTUnwrap(JSONSerialization.jsonObject(with: body) as? [String: Any])
+            XCTAssertEqual(json["model"] as? String, "gpt://folder/yandexgpt-lite/latest")
+            XCTAssertEqual(json["max_output_tokens"] as? Int, 16)
+
+            let response = HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: ["Content-Type": "application/json"]
+            )!
+            return (response, [Data(#"{"output_text":"Yandex suggestion"}"#.utf8)])
+        }
+
+        let manager = CloudAPIManager(
+            configuration: .init(
+                provider: .yandexAIStudio,
+                modelIdentifier: "gpt://folder/yandexgpt-lite/latest",
+                apiKey: "test-key",
+                networkEnabled: true,
+                timeout: 5
+            ),
+            session: session
+        )
+
+        let context = TextContext(textBefore: "Hello", textAfter: "", language: "en")
+        let result = try await manager.complete(context: context, maxTokens: 16, count: 1)
+
+        XCTAssertEqual(result.count, 1)
+        XCTAssertEqual(result[0].text, "Yandex suggestion")
+        XCTAssertEqual(result[0].source, .cloud)
+    }
 }
 
 private actor MockUserDictionary: UserDictionaryProviding {
@@ -275,4 +313,30 @@ private func makeStubbedSession(
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [URLProtocolStub.self]
     return URLSession(configuration: configuration)
+}
+
+private func httpBodyData(from request: URLRequest) -> Data? {
+    if let httpBody = request.httpBody {
+        return httpBody
+    }
+    guard let stream = request.httpBodyStream else {
+        return nil
+    }
+
+    stream.open()
+    defer { stream.close() }
+
+    var data = Data()
+    var buffer = [UInt8](repeating: 0, count: 4096)
+    while stream.hasBytesAvailable {
+        let read = stream.read(&buffer, maxLength: buffer.count)
+        if read < 0 {
+            return nil
+        }
+        if read == 0 {
+            break
+        }
+        data.append(buffer, count: read)
+    }
+    return data
 }

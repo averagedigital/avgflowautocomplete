@@ -371,7 +371,7 @@ final class EditorViewModel: ObservableObject {
         switch currentCloudProvider {
         case .openAI, .openRouter:
             return true
-        case .anthropic, .xAI:
+        case .anthropic, .xAI, .yandexAIStudio:
             return false
         }
     }
@@ -488,6 +488,8 @@ final class EditorViewModel: ObservableObject {
                 return .xAI
             case "openRouter":
                 return .openRouter
+            case "yandexAIStudio":
+                return .yandexAIStudio
             default:
                 return .openAI
             }
@@ -622,6 +624,8 @@ final class EditorViewModel: ObservableObject {
             return "grok-3-mini-beta"
         case .openRouter:
             return "google/gemini-2.5-flash"
+        case .yandexAIStudio:
+            return "gpt://b1g8u4n2m20c0dqtqagj/yandexgpt-lite/latest"
         }
     }
 

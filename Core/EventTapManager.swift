@@ -43,7 +43,9 @@ final class EventTapManager {
         ) else {
             isTapActive = false
             onTapStatusChanged?(false)
-            NSLog("[AIComplete] Event tap creation failed (Tab/Escape interception unavailable)")
+            NSLog(
+                "[AIComplete] Event tap creation failed (global hotkeys unavailable). AXTrusted=\(AXIsProcessTrusted()) InputMonitoring=\(CGPreflightListenEventAccess())"
+            )
             return
         }
 

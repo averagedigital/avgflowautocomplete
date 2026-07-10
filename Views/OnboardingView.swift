@@ -359,6 +359,7 @@ struct OnboardingView: View {
         case "anthropic": return "api.anthropic.com"
         case "xAI": return "api.x.ai"
         case "openRouter": return "openrouter.ai/api"
+        case "yandexAIStudio": return "ai.api.cloud.yandex.net"
         default: return "api.openai.com"
         }
     }
@@ -376,6 +377,7 @@ struct OnboardingView: View {
                 providerOption(id: "openAI", title: "OpenAI", desc: "GPT-4.1 Nano, Mini, Full")
                 providerOption(id: "xAI", title: "Grok (xAI)", desc: "Grok-3, Grok-3-mini")
                 providerOption(id: "openRouter", title: "OpenRouter", desc: "Gemini, Claude, Llama")
+                providerOption(id: "yandexAIStudio", title: "Yandex AI Studio", desc: "YandexGPT Lite")
                 providerOption(id: "anthropic", title: "Anthropic", desc: "Claude 3.5 Sonnet, Haiku")
             }
             Spacer()
@@ -483,6 +485,7 @@ struct OnboardingView: View {
         case "anthropic": return "Anthropic"
         case "xAI": return "xAI"
         case "openRouter": return "OpenRouter"
+        case "yandexAIStudio": return "Yandex AI Studio"
         default: return "Provider"
         }
     }

@@ -126,12 +126,19 @@ final class AcceptanceSynthesizer {
             )
         }
 
-        textInsertionService.insertViaClipboard(text: completion.text)
+        guard textInsertionService.insertViaClipboard(text: completion.text) else {
+            return InsertionResult(
+                succeeded: false,
+                route: .clipboardFallback,
+                targetClass: targetClass,
+                reason: "clipboard_fallback_not_posted"
+            )
+        }
         return InsertionResult(
             succeeded: true,
             route: .clipboardFallback,
             targetClass: targetClass,
-            reason: "clipboard_fallback"
+            reason: "clipboard_fallback_posted_unverified"
         )
     }
 }

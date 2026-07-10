@@ -51,6 +51,7 @@ final class SettingsViewModel: ObservableObject {
         case anthropic
         case xAI
         case openRouter
+        case yandexAIStudio
 
         var id: String { rawValue }
 
@@ -64,6 +65,8 @@ final class SettingsViewModel: ObservableObject {
                 return "Grok (xAI)"
             case .openRouter:
                 return "OpenRouter"
+            case .yandexAIStudio:
+                return "Yandex AI Studio"
             }
         }
 
@@ -77,6 +80,8 @@ final class SettingsViewModel: ObservableObject {
                 return .xAI
             case .openRouter:
                 return .openRouter
+            case .yandexAIStudio:
+                return .yandexAIStudio
             }
         }
     }
@@ -653,6 +658,14 @@ final class SettingsViewModel: ObservableObject {
                 .init(id: "google/gemini-2.5-flash", title: "Gemini 2.5 Flash", detail: "Fast + strong text quality"),
                 .init(id: "openai/gpt-4.1-mini", title: "GPT-4.1 Mini", detail: "Stable high-quality fallback"),
                 .init(id: "anthropic/claude-3.5-haiku", title: "Claude 3.5 Haiku", detail: "Very fast text completion")
+            ]
+        case .yandexAIStudio:
+            return [
+                .init(
+                    id: "gpt://b1g8u4n2m20c0dqtqagj/yandexgpt-lite/latest",
+                    title: "YandexGPT Lite",
+                    detail: "Fast AI Studio text model"
+                )
             ]
         }
     }

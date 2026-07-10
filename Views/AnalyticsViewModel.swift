@@ -193,6 +193,7 @@ final class AnalyticsViewModel: ObservableObject {
             case "anthropic": return .anthropic
             case "xAI": return .xAI
             case "openRouter": return .openRouter
+            case "yandexAIStudio": return .yandexAIStudio
             default: return .openAI
             }
         }()
@@ -203,6 +204,7 @@ final class AnalyticsViewModel: ObservableObject {
         case .anthropic: model = "claude-3-5-haiku-latest"
         case .xAI: model = "grok-3-mini-beta"
         case .openRouter: model = "google/gemini-2.5-flash"
+        case .yandexAIStudio: model = "gpt://b1g8u4n2m20c0dqtqagj/yandexgpt-lite/latest"
         }
 
         await cloudManager.updateConfiguration(CloudConfiguration(

@@ -85,10 +85,12 @@ final class OverlayCompletionManager {
     private var typingSpeedEMA: Double = 0
     private var rapidTypingStreak = 0
     private var defaultsObserver: NSObjectProtocol?
+    private var inputMonitoringObserver: NSObjectProtocol?
     private var selectionRewriteTask: Task<Void, Never>?
     private var activeSelectionRewriteRequest: SelectionRewriteRequest?
     private var lastSelectionSignature: String?
     private var suppressSelectionPromptUntil: Date?
+    private var lastLoggedConfigSnapshot: String?
 
     // Settings cache
     private var completionMode: CompletionMode = .hybrid
@@ -160,6 +162,16 @@ final class OverlayCompletionManager {
         ) { [weak self] _ in
             Task { @MainActor [weak self] in
                 self?.reloadSettings()
+            }
+        }
+        inputMonitoringObserver = NotificationCenter.default.addObserver(
+            forName: .inputMonitoringPermissionGranted,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                guard let self, self.isRunning else { return }
+                self.eventTapManager.start()
             }
         }
 
@@ -238,6 +250,10 @@ final class OverlayCompletionManager {
         if let defaultsObserver {
             NotificationCenter.default.removeObserver(defaultsObserver)
             self.defaultsObserver = nil
+        }
+        if let inputMonitoringObserver {
+            NotificationCenter.default.removeObserver(inputMonitoringObserver)
+            self.inputMonitoringObserver = nil
         }
         focusedElement = nil
         previousContext = nil
@@ -1073,6 +1089,7 @@ final class OverlayCompletionManager {
             case "anthropic": return .anthropic
             case "xAI": return .xAI
             case "openRouter": return .openRouter
+            case "yandexAIStudio": return .yandexAIStudio
             default: return .openAI
             }
         }()
@@ -1082,7 +1099,11 @@ final class OverlayCompletionManager {
 
         cloudAPIKey = APIKeyStore.read()
 
-        debugLog("[AIComplete] Config: mode=\(modeRaw) provider=\(providerRaw) model=\(cloudModelIdentifier) hasKey=\(cloudAPIKey != nil) localModelAvailable=\(LocalModelManager.isAvailable)")
+        let configSnapshot = "mode=\(modeRaw) provider=\(providerRaw) model=\(cloudModelIdentifier) hasKey=\(cloudAPIKey != nil) localModelAvailable=\(LocalModelManager.isAvailable)"
+        if lastLoggedConfigSnapshot != configSnapshot {
+            lastLoggedConfigSnapshot = configSnapshot
+            debugLog("[AIComplete] Config: \(configSnapshot)")
+        }
 
         let stylePrompt = defaults.string(forKey: Constants.UserDefaultsKeys.personalizationSystemPrompt)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1232,7 +1253,7 @@ final class OverlayCompletionManager {
         switch cloudProvider {
         case .openAI, .openRouter:
             return true
-        case .anthropic, .xAI:
+        case .anthropic, .xAI, .yandexAIStudio:
             return false
         }
     }
@@ -1329,6 +1350,7 @@ final class OverlayCompletionManager {
         case .anthropic: return "claude-3-5-haiku-latest"
         case .xAI: return "grok-3-mini-beta"
         case .openRouter: return "google/gemini-2.5-flash"
+        case .yandexAIStudio: return "gpt://b1g8u4n2m20c0dqtqagj/yandexgpt-lite/latest"
         }
     }
 

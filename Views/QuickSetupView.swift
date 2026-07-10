@@ -147,6 +147,53 @@ struct QuickSetupView: View {
                         .fill(AITheme.peach.opacity(0.3))
                 )
             }
+
+            HStack(spacing: 14) {
+                ZStack {
+                    Circle()
+                        .fill(permissionsManager.isInputMonitoringGranted
+                              ? AITheme.accent.opacity(0.2)
+                              : Color.orange.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                    Image(systemName: permissionsManager.isInputMonitoringGranted
+                          ? "keyboard.badge.eye.fill"
+                          : "keyboard.badge.eye")
+                        .font(.title3)
+                        .foregroundStyle(permissionsManager.isInputMonitoringGranted
+                                         ? AITheme.accentDeep
+                                         : .orange)
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    HStack(spacing: 8) {
+                        Text("Input Monitoring")
+                            .font(.system(.body, design: .rounded).weight(.semibold))
+                        AITheme.statusPill(
+                            permissionsManager.isInputMonitoringGranted
+                                ? (L.isRussian ? "Включено" : "Granted")
+                                : (L.isRussian ? "Требуется" : "Required"),
+                            isPositive: permissionsManager.isInputMonitoringGranted
+                        )
+                    }
+                    Text(L.isRussian
+                         ? "Нужен для глобальных горячих клавиш принятия и отмены"
+                         : "Required for global accept and cancel hotkeys")
+                        .font(.system(.caption, design: .rounded))
+                        .foregroundStyle(AITheme.textSecondary)
+                }
+
+                Spacer()
+
+                if !permissionsManager.isInputMonitoringGranted {
+                    Button {
+                        permissionsManager.openInputMonitoringSettings()
+                    } label: {
+                        Label(L.isRussian ? "Открыть" : "Open Settings",
+                              systemImage: "gear")
+                    }
+                    .buttonStyle(AIAccentButtonStyle())
+                }
+            }
         }
         .aiCard(tint: permissionsManager.isAccessibilityGranted
                 ? AITheme.sectionTint
@@ -246,6 +293,8 @@ struct QuickSetupView: View {
             return ("Get Key", URL(string: "https://openrouter.ai/keys")!)
         case .anthropic:
             return ("Get Key", URL(string: "https://console.anthropic.com/")!)
+        case .yandexAIStudio:
+            return ("Get Key", URL(string: "https://aistudio.yandex.ru/")!)
         default:
             return ("Get Key", URL(string: "https://platform.openai.com/api-keys")!)
         }
